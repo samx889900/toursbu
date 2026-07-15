@@ -1,0 +1,118 @@
+import type { Booking } from "@toursbu/types";
+
+export const bookings: Booking[] = [
+  {
+    id: "bk-1",
+    bookingId: "BU-A3F8K2",
+    tripId: "trip-1",
+    userId: "user-student-1",
+    status: "CONFIRMED",
+    amountPaid: 2000,
+    remainingAmount: 10999,
+    whatsappJoined: true,
+    checkedIn: false,
+    specialRequests: "Vegetarian meals preferred",
+    roomAllocation: "Room 204",
+    busAllocation: "Seat 12A",
+    notes: "",
+    createdAt: "2026-06-20T14:30:00Z",
+    updatedAt: "2026-06-20T14:35:00Z",
+  },
+  {
+    id: "bk-2",
+    bookingId: "BU-K7M2P9",
+    tripId: "trip-2",
+    userId: "user-student-1",
+    status: "PAYMENT_RECEIVED",
+    amountPaid: 2000,
+    remainingAmount: 7999,
+    whatsappJoined: false,
+    checkedIn: false,
+    specialRequests: "",
+    roomAllocation: "",
+    busAllocation: "",
+    notes: "",
+    createdAt: "2026-07-01T10:00:00Z",
+    updatedAt: "2026-07-01T10:05:00Z",
+  },
+  {
+    id: "bk-3",
+    bookingId: "BU-R5N3Q8",
+    tripId: "trip-3",
+    userId: "user-student-2",
+    status: "WAITLISTED",
+    amountPaid: 0,
+    remainingAmount: 5999,
+    whatsappJoined: false,
+    checkedIn: false,
+    specialRequests: "Window seat please",
+    roomAllocation: "",
+    busAllocation: "",
+    notes: "Waitlisted — seats full",
+    createdAt: "2026-07-02T16:00:00Z",
+    updatedAt: "2026-07-02T16:00:00Z",
+  },
+  {
+    id: "bk-4",
+    bookingId: "BU-T2L6W4",
+    tripId: "trip-1",
+    userId: "user-student-3",
+    status: "PENDING_PAYMENT",
+    amountPaid: 0,
+    remainingAmount: 12999,
+    whatsappJoined: false,
+    checkedIn: false,
+    specialRequests: "",
+    roomAllocation: "",
+    busAllocation: "",
+    notes: "",
+    createdAt: "2026-07-03T09:00:00Z",
+    updatedAt: "2026-07-03T09:00:00Z",
+  },
+  {
+    id: "bk-5",
+    bookingId: "BU-V8J4X1",
+    tripId: "trip-4",
+    userId: "user-student-2",
+    status: "CONFIRMED",
+    amountPaid: 2500,
+    remainingAmount: 8999,
+    whatsappJoined: true,
+    checkedIn: false,
+    specialRequests: "",
+    roomAllocation: "Room 106",
+    busAllocation: "",
+    notes: "",
+    createdAt: "2026-07-04T11:00:00Z",
+    updatedAt: "2026-07-04T11:10:00Z",
+  },
+  {
+    id: "bk-6",
+    bookingId: "BU-H9C2M7",
+    tripId: "trip-5",
+    userId: "user-student-3",
+    status: "CANCELLED",
+    amountPaid: 3000,
+    remainingAmount: 15999,
+    whatsappJoined: false,
+    checkedIn: false,
+    specialRequests: "",
+    roomAllocation: "",
+    busAllocation: "",
+    notes: "Cancelled by student — personal reasons",
+    createdAt: "2026-06-25T08:00:00Z",
+    updatedAt: "2026-06-28T12:00:00Z",
+  },
+];
+
+export function getBookingsByUserId(userId: string): Booking[] {
+  return bookings.filter((b) => b.userId === userId);
+}
+
+export function getBookingsByTripId(tripId: string): Booking[] {
+  return bookings.filter((b) => b.tripId === tripId);
+}
+
+export function getBookingById(bookingId: string): Booking | undefined {
+  return bookings.find((b) => b.bookingId === bookingId);
+}

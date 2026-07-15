@@ -1,0 +1,27 @@
+{
+  "name": "toursbu",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "clean": "turbo clean",
+    "dev:web": "turbo dev --filter=@toursbu/web",
+    "dev:api": "turbo dev --filter=@toursbu/api",
+    "build:web": "turbo build --filter=@toursbu/web",
+    "build:api": "turbo build --filter=@toursbu/api"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0",
+    "typescript": "^5.7.0"
+  },
+  "packageManager": "npm@10.8.0",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

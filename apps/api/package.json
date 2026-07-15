@@ -1,0 +1,15 @@
+{
+  "name": "@toursbu/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'API not yet implemented — run apps/web instead'",
+    "build": "echo 'API build placeholder'",
+    "lint": "echo 'API lint placeholder'",
+    "typecheck": "echo 'API typecheck placeholder'"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}
