@@ -1,5 +1,5 @@
 // ============================================================
-// ToursBU — Complete Normalized Prisma Schema
+// ToursBU — Core Application Schema
 // ============================================================
 
 generator client {
@@ -7,484 +7,864 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-// ─── Organization ────────────────────────────────────────────
+// ─── Enums ───────────────────────────────────────────────────
 
-model Organization {
-  id           String   @id @default(cuid())
-  name         String
-  logo         String   @default("")
-  website      String   @default("")
-  supportEmail String   @default("")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  trips Trip[]
-  users User[]
-
-  @@map("organizations")
+enum TripStatus {
+  DRAFT
+  REVIEW
+  PUBLISHED
+  BOOKINGS_CLOSED
+  COMPLETED
+  ARCHIVED
+  CANCELLED
 }
 
-// ─── User ────────────────────────────────────────────────────
+enum BookingStatus {
+  DRAFT
+  PENDING_PAYMENT
+  ADVANCE_PAID
+  PAYMENT_PENDING
+  PARTIALLY_PAID
+  FULLY_PAID
+  CONFIRMED
+  WAITLISTED
+  CANCELLED
+  REFUND_PENDING
+  REFUNDED
+  COMPLETED
+  NO_SHOW
+}
 
-enum UserRole {
-  SUPER_ADMIN
-  ADMIN
-  ORGANIZER
-  STUDENT
+enum PaymentStatus {
+  CREATED
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+  PARTIAL_REFUND
+}
+
+enum PaymentAttemptStatus {
+  CREATED
+  ATTEMPTED
+  SUCCESS
+  FAILED
+}
+
+enum RefundStatus {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
+enum WaitlistStatus {
+  WAITING
+  PROMOTED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  RAZORPAY
+  MANUAL
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum RoomType {
+  SINGLE
+  DOUBLE
+  TRIPLE
+  QUAD
+  DORMITORY
 }
 
 enum Gender {
   MALE
   FEMALE
   OTHER
-  PREFER_NOT_TO_SAY
 }
 
+enum GovIdType {
+  AADHAAR
+  PAN
+  PASSPORT
+  VOTER_ID
+  DRIVING_LICENSE
+  OTHER
+}
+
+enum DietaryPreference {
+  VEG
+  NON_VEG
+  JAIN
+  VEGAN
+  OTHER
+}
+
+enum EventType {
+  BOOKING_STARTED
+  BOOKING_CREATED
+  BOOKING_LOCKED
+  BOOKING_LOCK_EXPIRED
+  TRAVELER_UPDATED
+  PAYMENT_STARTED
+  PAYMENT_FAILED
+  PAYMENT_SUCCESS
+  BOOKING_CONFIRMED
+  CHECKLIST_CREATED
+  RECEIPT_GENERATED
+  WHATSAPP_READY
+  LOCK_RELEASED
+  EMAIL_SENT
+  WHATSAPP_SHARED
+  CHECKLIST_COMPLETED
+  REFUND_STARTED
+  REFUND_COMPLETED
+  BOOKING_CANCELLED
+  TRIP_COMPLETED
+  WAITLIST_PROMOTED
+  PAYMENT_LINK_SENT
+  WAITLIST_EXPIRED
+}
+
+// ─── User ────────────────────────────────────────────────────
 model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
-  name           String
-  phone          String   @default("")
-  avatar         String   @default("")
-  role           UserRole @default(STUDENT)
-  college        String   @default("")
-  gender         Gender   @default(PREFER_NOT_TO_SAY)
-  age            Int?
-  emergencyContact String @default("")
-  emergencyPhone   String @default("")
-  organizationId   String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  organization  Organization? @relation(fields: [organizationId], references: [id])
-  bookings      Booking[]
-  reviews       Review[]
-  waitlists     Waitlist[]
-  notifications Notification[]
-  createdTrips  Trip[]         @relation("TripCreator")
-  activityLogs  ActivityLog[]
-  media         Media[]
+  // Better Auth Relations
+  sessions Session[]
+  accounts Account[]
 
-  @@map("users")
+  // ToursBU Custom Fields
+  role                String  @default("STUDENT")
+  phone               String?
+  college             String?
+  emergencyContact    String?
+  onboardingCompleted Boolean @default(false)
+
+  bookings        Booking[]
+  waitlistEntries WaitlistEntry[]
+  couponUsages    CouponUsage[]
+  bookingNotes    BookingNote[]
+  bookingLocks    BookingLock[]
+  notifications   Notification[]
+
+  notificationPreference NotificationPreference?
+
+  @@map("user")
 }
 
-// ─── Category ────────────────────────────────────────────────
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title     String
+  message   String   @db.Text
+  type      String   // e.g. PAYMENT, BOOKING, ALERT
+  actionUrl String?
+  read      Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("notification")
+}
+
+// ─── Better Auth Models ──────────────────────────────────────
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@map("verification")
+}
+
+// ─── Core Domain Models ──────────────────────────────────────
 
 model Category {
-  id   String @id @default(cuid())
-  name String
-  slug String @unique
-  icon String @default("")
+  id         String   @id @default(cuid())
+  name       String   @unique
+  slug       String   @unique
+  icon       String?
+  coverImage String?
+  featured   Boolean  @default(false)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   trips Trip[]
 
-  @@map("categories")
-}
-
-// ─── Trip ────────────────────────────────────────────────────
-
-enum TripStatus {
-  DRAFT
-  PUBLISHED
-  CANCELLED
-  COMPLETED
-}
-
-enum Difficulty {
-  EASY
-  MODERATE
-  HARD
+  @@map("category")
 }
 
 model Trip {
-  id               String     @id @default(cuid())
-  title            String
-  slug             String     @unique
-  description      String     @db.Text
-  location         String
-  price            Float
-  advanceAmount    Float
-  totalSeats       Int
-  availableSeats   Int
-  tripStatus       TripStatus @default(DRAFT)
-  difficulty       Difficulty @default(MODERATE)
-  duration         String
-  pickupPoint      String     @default("")
-  startDate        DateTime
-  endDate          DateTime
-  whatsappLink     String     @default("")
-  brochureUrl      String     @default("")
-  coverImage       String     @default("")
-  accommodation    String     @default("")
-  travelDetails    String     @default("") @db.Text
-  terms            Json       @default("[]")
-  cancellationPolicy Json     @default("[]")
-  categoryId       String?
-  organizationId   String?
-  createdById      String?
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  shortDesc   String?
+  description String?   @db.Text
+  location    String?
+  startDate   DateTime?
+  endDate     DateTime?
 
-  category      Category?     @relation(fields: [categoryId], references: [id])
-  organization  Organization? @relation(fields: [organizationId], references: [id])
-  createdBy     User?         @relation("TripCreator", fields: [createdById], references: [id])
+  // Status & Visibility
+  status     TripStatus @default(DRAFT)
+  isArchived Boolean    @default(false)
+  deletedAt  DateTime?
+
+  // Relations
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // Pricing & Capacity
+  price         Int? // stored in cents or smallest currency unit
+  advanceAmount Int?
+  capacity      Int?
+
+  // Analytics
+  viewCount     Int @default(0)
+  bookingClicks Int @default(0)
+  favoriteCount Int @default(0)
+
+  bookingStarted   Int @default(0)
+  bookingCompleted Int @default(0)
+  paymentSuccess   Int @default(0)
+  paymentFailure   Int @default(0)
+  couponApplied    Int @default(0)
+  couponFailed     Int @default(0)
+
+  // Document attachments
+  brochureUrl String?
+
+  // Standard timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
   images        TripImage[]
-  features      TripFeature[]
   days          Day[]
-  faqs          TripFaq[]
-  bookings      Booking[]
+  faqs          FAQ[]
+  policies      CancellationPolicy[]
   reviews       Review[]
-  waitlists     Waitlist[]
+  bookings      Booking[]
+  waitlist      WaitlistEntry[]
+  rooms         Room[]
+  buses         Bus[]
+  coupons       Coupon[]
+  whatsappGroup WhatsAppGroup?
+  bookingLocks  BookingLock[]
 
-  @@map("trips")
+  @@index([slug])
+  @@index([status])
+  @@index([categoryId])
+  @@index([startDate])
+  @@map("trip")
 }
-
-// ─── Trip Image ──────────────────────────────────────────────
 
 model TripImage {
-  id      String @id @default(cuid())
-  tripId  String
-  mediaId String?
+  id      String  @id @default(cuid())
   url     String
-  alt     String @default("")
-  order   Int    @default(0)
+  isCover Boolean @default(false)
+  order   Int     @default(0)
 
-  trip  Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  media Media? @relation(fields: [mediaId], references: [id])
-
-  @@map("trip_images")
-}
-
-// ─── Trip Feature (Included/Excluded) ────────────────────────
-
-enum FeatureType {
-  INCLUDED
-  EXCLUDED
-}
-
-model TripFeature {
-  id     String      @id @default(cuid())
   tripId String
-  type   FeatureType
-  label  String
-  icon   String      @default("")
-  order  Int         @default(0)
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
-  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@map("trip_features")
+  @@index([tripId])
+  @@map("trip_image")
 }
-
-// ─── Day & Activity (Itinerary) ──────────────────────────────
 
 model Day {
-  id          String @id @default(cuid())
-  tripId      String
-  dayNumber   Int
-  title       String
-  description String @default("")
+  id    String @id @default(cuid())
+  title String
+  order Int    @default(0)
 
-  trip       Trip       @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId String
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
   activities Activity[]
 
-  @@map("days")
-}
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-enum ActivityType {
-  TRAVEL
-  ACTIVITY
-  MEAL
-  STAY
-  FREE
+  @@index([tripId])
+  @@map("day")
 }
 
 model Activity {
-  id          String       @id @default(cuid())
-  dayId       String
+  id          String  @id @default(cuid())
   title       String
-  description String       @default("")
-  time        String       @default("")
-  location    String       @default("")
-  type        ActivityType @default(ACTIVITY)
-  order       Int          @default(0)
+  time        String?
+  location    String?
+  description String? @db.Text
+  order       Int     @default(0)
 
-  day Day @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  dayId String
+  day   Day    @relation(fields: [dayId], references: [id], onDelete: Cascade)
 
-  @@map("activities")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dayId])
+  @@map("activity")
 }
 
-// ─── Trip FAQ ────────────────────────────────────────────────
-
-model TripFaq {
+model FAQ {
   id       String @id @default(cuid())
-  tripId   String
   question String
   answer   String @db.Text
   order    Int    @default(0)
 
-  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  tripId String
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
-  @@map("trip_faqs")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tripId])
+  @@map("faq")
 }
 
-// ─── Booking ─────────────────────────────────────────────────
+model CancellationPolicy {
+  id          String  @id @default(cuid())
+  title       String?
+  description String  @db.Text
+  order       Int     @default(0)
 
-enum BookingStatus {
-  PENDING_PAYMENT
-  PAYMENT_RECEIVED
-  CONFIRMED
-  WAITLISTED
-  CHECKED_IN
-  COMPLETED
-  CANCELLED
-  REFUNDED
+  tripId String
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tripId])
+  @@map("cancellation_policy")
 }
+
+model Review {
+  id      String  @id @default(cuid())
+  rating  Int
+  comment String? @db.Text
+
+  tripId String
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tripId])
+  @@map("review")
+}
+
+// ─── Booking & Payments ──────────────────────────────────────
 
 model Booking {
-  id              String        @id @default(cuid())
-  bookingId       String        @unique
-  tripId          String
-  userId          String
-  status          BookingStatus @default(PENDING_PAYMENT)
-  amountPaid      Float         @default(0)
-  remainingAmount Float         @default(0)
-  whatsappJoined  Boolean       @default(false)
-  checkedIn       Boolean       @default(false)
-  specialRequests String        @default("")
-  roomAllocation  String        @default("")
-  busAllocation   String        @default("")
-  notes           String        @default("") @db.Text
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id            String @id @default(cuid())
+  bookingNumber String @unique
 
-  trip     Trip      @relation(fields: [tripId], references: [id])
-  user     User      @relation(fields: [userId], references: [id])
-  payments Payment[]
+  tripId String
+  trip   Trip   @relation(fields: [tripId], references: [id])
 
-  @@map("bookings")
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  status BookingStatus @default(DRAFT)
+
+  totalAmount   Int
+  advanceAmount Int
+  amountPaid    Int @default(0)
+
+  travelerCount Int
+
+  expiresAt DateTime?
+
+  isArchived Boolean   @default(false)
+  whatsappJoined Boolean @default(false)
+  deletedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  travelers         BookingTraveler[]
+  emergencyContacts EmergencyContact[]
+  payments          Payment[]
+  paymentAttempts   PaymentAttempt[]
+  events            BookingEvent[]
+  invoices          Invoice[]
+  receipts          Receipt[]
+  notes             BookingNote[]
+  refunds           Refund[]
+  couponUsages      CouponUsage[]
+  checklistItems    BookingChecklistItem[]
+  RoomAllocation    RoomAllocation[]
+  BusAllocation     BusAllocation[]
+
+  @@index([tripId])
+  @@index([userId])
+  @@index([bookingNumber])
+  @@map("booking")
 }
 
-// ─── Payment ─────────────────────────────────────────────────
+model BookingTraveler {
+  id        String  @id @default(cuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-enum PaymentStatus {
-  PENDING
-  PAID
-  FAILED
-  REFUNDED
+  name               String
+  email              String?
+  phone              String?
+  gender             Gender?
+  dateOfBirth        DateTime?
+  governmentIdType   GovIdType?
+  governmentIdNumber String?
+  dietaryPreference  DietaryPreference?
+
+  isPrimary   Boolean @default(false)
+  medicalInfo String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  roomAllocation RoomAllocation?
+  busAllocation  BusAllocation?
+
+  @@index([bookingId])
+  @@map("booking_traveler")
 }
 
-enum PaymentGateway {
-  RAZORPAY
-  OFFLINE
-  BANK_TRANSFER
+model EmergencyContact {
+  id        String  @id @default(cuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  name     String
+  relation String
+  phone    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId])
+  @@map("emergency_contact")
 }
 
-enum PaymentMethod {
-  UPI
-  CARD
-  NETBANKING
-  WALLET
-  BANK_TRANSFER
-  OFFLINE
+model BookingEvent {
+  id        String  @id @default(cuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  actorId   String?
+
+  eventType EventType
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([bookingId])
+  @@map("booking_event")
+}
+
+model WaitlistEntry {
+  id     String @id @default(cuid())
+  tripId String
+  trip   Trip   @relation(fields: [tripId], references: [id])
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  travelerCount Int
+  status        WaitlistStatus @default(WAITING)
+  priority      Int            @default(0)
+  promotedAt    DateTime?
+  expiresAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tripId])
+  @@index([userId])
+  @@map("waitlist_entry")
+}
+
+model PaymentAttempt {
+  id        String  @id @default(cuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  razorpayOrderId String               @unique
+  amount          Int
+  status          PaymentAttemptStatus @default(CREATED)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId])
+  @@map("payment_attempt")
 }
 
 model Payment {
-  id               String         @id @default(cuid())
-  bookingId        String
-  gateway          PaymentGateway @default(RAZORPAY)
-  gatewayOrderId   String         @default("")
-  gatewayPaymentId String         @default("")
-  status           PaymentStatus  @default(PENDING)
-  paymentMethod    PaymentMethod  @default(UPI)
-  amount           Float
-  currency         String         @default("INR")
-  receiptUrl       String         @default("")
-  paidAt           DateTime?
-  createdAt        DateTime       @default(now())
+  id        String  @id @default(cuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-  booking Booking @relation(fields: [bookingId], references: [id])
+  amount        Int
+  status        PaymentStatus @default(SUCCESS)
+  type          String // ADVANCE, REMAINING, FULL
+  method        PaymentMethod @default(RAZORPAY)
+  transactionId String?       @unique // Razorpay payment ID
+  receiptUrl    String?
 
-  @@map("payments")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId])
+  @@map("payment")
 }
 
-// ─── Review ──────────────────────────────────────────────────
-
-model Review {
+model PaymentWebhookEvent {
   id        String   @id @default(cuid())
-  tripId    String
-  userId    String
-  rating    Int
-  review    String   @db.Text
-  images    Json     @default("[]")
+  eventId   String   @unique // From Razorpay
+  eventType String
+  payload   Json
+  processed Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  trip Trip @relation(fields: [tripId], references: [id])
-  user User @relation(fields: [userId], references: [id])
-
-  @@map("reviews")
+  @@map("payment_webhook_event")
 }
 
-// ─── Coupon ──────────────────────────────────────────────────
+model Refund {
+  id        String  @id @default(cuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-enum CouponType {
-  PERCENTAGE
-  FLAT
+  amount           Int
+  status           RefundStatus @default(PENDING)
+  razorpayRefundId String?      @unique
+  reason           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId])
+  @@map("refund")
 }
+
+// ─── Allocations & Operations ────────────────────────────────
+
+model Room {
+  id     String @id @default(cuid())
+  tripId String
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  roomNumber String
+  capacity   Int
+  type       RoomType
+
+  allocations RoomAllocation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("room")
+}
+
+model RoomAllocation {
+  id         String          @id @default(cuid())
+  bookingId  String
+  booking    Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  travelerId String          @unique
+  traveler   BookingTraveler @relation(fields: [travelerId], references: [id], onDelete: Cascade)
+
+  roomId String?
+  room   Room?   @relation(fields: [roomId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("room_allocation")
+}
+
+model Bus {
+  id     String @id @default(cuid())
+  tripId String
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  busNumber String
+  capacity  Int
+
+  allocations BusAllocation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("bus")
+}
+
+model BusAllocation {
+  id         String          @id @default(cuid())
+  bookingId  String
+  booking    Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  travelerId String          @unique
+  traveler   BookingTraveler @relation(fields: [travelerId], references: [id], onDelete: Cascade)
+
+  busId String?
+  bus   Bus?    @relation(fields: [busId], references: [id])
+
+  seatNumber String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("bus_allocation")
+}
+
+model WhatsAppGroup {
+  id     String @id @default(cuid())
+  tripId String @unique
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  inviteLink String
+  expiresAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("whatsapp_group")
+}
+
+model BookingNote {
+  id        String  @id @default(cuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  authorId  String
+  user      User    @relation(fields: [authorId], references: [id])
+
+  note       String  @db.Text
+  isInternal Boolean @default(true) // If true, only admins see it
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId])
+  @@map("booking_note")
+}
+
+// ─── Billing & Discounts ─────────────────────────────────────
 
 model Coupon {
-  id        String     @id @default(cuid())
-  code      String     @unique
-  discount  Float
-  type      CouponType
-  maxUses   Int        @default(0)
-  usedCount Int        @default(0)
-  expiresAt DateTime?
-  active    Boolean    @default(true)
-  createdAt DateTime   @default(now())
+  id            String       @id @default(cuid())
+  code          String       @unique
+  discountType  DiscountType
+  discountValue Int
+  maxUses       Int?
+  usedCount     Int          @default(0)
+  validFrom     DateTime?
+  validUntil    DateTime?
 
-  @@map("coupons")
+  tripId String?
+  trip   Trip?   @relation(fields: [tripId], references: [id])
+
+  usages CouponUsage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("coupon")
 }
 
-// ─── Waitlist ────────────────────────────────────────────────
-
-enum WaitlistStatus {
-  WAITING
-  NOTIFIED
-  CONVERTED
-  EXPIRED
-}
-
-model Waitlist {
-  id        String         @id @default(cuid())
-  tripId    String
+model CouponUsage {
+  id        String  @id @default(cuid())
+  couponId  String
+  coupon    Coupon  @relation(fields: [couponId], references: [id])
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id])
   userId    String
-  status    WaitlistStatus @default(WAITING)
-  createdAt DateTime       @default(now())
+  user      User    @relation(fields: [userId], references: [id])
 
-  trip Trip @relation(fields: [tripId], references: [id])
-  user User @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
 
-  @@unique([tripId, userId])
-  @@map("waitlists")
+  @@map("coupon_usage")
 }
 
-// ─── Notification ────────────────────────────────────────────
+model Invoice {
+  id        String  @id @default(cuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-enum NotificationType {
-  BOOKING
-  PAYMENT
-  TRIP
-  SYSTEM
-  PROMOTION
+  invoiceNumber    String  @unique
+  amount           Int
+  gst              Int?
+  organizationName String?
+  paymentReference String?
+  downloadCount    Int     @default(0)
+  pdfUrl           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId])
+  @@map("invoice")
 }
 
-model Notification {
-  id        String           @id @default(cuid())
-  userId    String
-  title     String
-  message   String
-  type      NotificationType @default(SYSTEM)
-  isRead    Boolean          @default(false)
-  createdAt DateTime         @default(now())
+model Receipt {
+  id        String  @id @default(cuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-  user User @relation(fields: [userId], references: [id])
+  receiptNumber    String  @unique
+  amount           Int
+  gst              Int?
+  organizationName String?
+  paymentReference String?
+  qrCodeReference  String?
+  downloadCount    Int     @default(0)
+  pdfUrl           String?
 
-  @@map("notifications")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId])
+  @@map("receipt")
 }
 
-// ─── Email Queue ─────────────────────────────────────────────
+// ─── Email Logistics ─────────────────────────────────────────
 
-enum EmailStatus {
-  QUEUED
-  SENT
-  FAILED
+model EmailLog {
+  id         String  @id @default(cuid())
+  to         String
+  subject    String
+  status     String  @default("SENT") // SENT, DELIVERED, FAILED, BOUNCED
+  providerId String? // Resend ID
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("email_log")
 }
 
-model EmailQueue {
-  id        String      @id @default(cuid())
-  recipient String
-  subject   String
-  template  String
-  data      Json        @default("{}")
-  status    EmailStatus @default(QUEUED)
-  sentAt    DateTime?
-  createdAt DateTime    @default(now())
+model NotificationPreference {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("email_queue")
+  emailBooking    Boolean @default(true)
+  emailReminder   Boolean @default(true)
+  whatsappUpdates Boolean @default(true)
+  marketing       Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notification_preference")
 }
 
-// ─── Activity Log ────────────────────────────────────────────
+model AuditLog {
+  id         String  @id @default(cuid())
+  action     String
+  actorId    String?
+  resource   String
+  resourceId String?
+  metadata   Json?
 
-model ActivityLog {
-  id        String   @id @default(cuid())
-  adminId   String
-  action    String
-  entity    String
-  entityId  String   @default("")
-  ipAddress String   @default("")
-  timestamp DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  admin User @relation(fields: [adminId], references: [id])
-
-  @@map("activity_logs")
+  @@map("audit_log")
 }
 
-// ─── Media Library ───────────────────────────────────────────
+model FeatureFlag {
+  id          String  @id @default(cuid())
+  key         String  @unique
+  enabled     Boolean @default(false)
+  description String?
 
-enum MediaType {
-  IMAGE
-  PDF
-  VIDEO
+  updatedAt DateTime @updatedAt
+
+  @@map("feature_flag")
 }
 
-model Media {
-  id         String    @id @default(cuid())
-  url        String
-  provider   String    @default("LOCAL")
-  type       MediaType @default(IMAGE)
-  size       Int       @default(0)
-  uploadedBy String?
-  createdAt  DateTime  @default(now())
+model BookingLock {
+  id            String @id @default(cuid())
+  tripId        String
+  trip          Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  travelerCount Int
 
-  uploader   User?       @relation(fields: [uploadedBy], references: [id])
-  tripImages TripImage[]
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 
-  @@map("media")
+  @@index([tripId])
+  @@index([userId])
+  @@map("booking_lock")
 }
 
-// ─── Content Block (Generic CMS) ─────────────────────────────
+model BookingChecklistItem {
+  id        String  @id @default(cuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
-enum ContentBlockStatus {
-  DRAFT
-  PUBLISHED
+  title       String
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  required    Boolean   @default(true)
+  order       Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId])
+  @@map("booking_checklist_item")
 }
 
-model ContentBlock {
-  id        String             @id @default(cuid())
-  type      String
-  slug      String             @unique
-  title     String
-  content   Json               @default("{}")
-  status    ContentBlockStatus @default(DRAFT)
-  order     Int                @default(0)
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
-
-  @@map("content_blocks")
-}
-
-// ─── Settings ────────────────────────────────────────────────
-
-model Settings {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  value       String
-  description String   @default("")
-  updatedAt   DateTime @updatedAt
-
-  @@map("settings")
-}

@@ -1,36 +1,46 @@
 import Link from "next/link";
 import Image from "next/image";
-import { currentUser } from "@/lib/data/users";
-import { getBookingsByUserId } from "@/lib/data/bookings";
-import { getTripById } from "@/lib/data/trips";
+import { getSession } from "@/lib/auth/server";
+import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { MapPin, ChevronRight } from "lucide-react";
-import type { Booking } from "@toursbu/types";
+import { BookingStatus } from "@prisma/client";
 
-export default function MyTripsPage() {
-  const user = currentUser;
-  const bookings = getBookingsByUserId(user.id);
-  
+export default async function MyTripsPage() {
+  const session = await getSession();
+  if (!session?.user) redirect("/auth/signin?callbackUrl=/dashboard/trips");
+
+  const bookings = await prisma.booking.findMany({
+    where: { userId: session.user.id },
+    include: { trip: true },
+    orderBy: { createdAt: "desc" }
+  });
+
   // Group bookings
   const upcomingBookings = bookings.filter((b) => 
-    ["CONFIRMED", "PENDING_PAYMENT"].includes(b.status)
+    ([BookingStatus.CONFIRMED, BookingStatus.ADVANCE_PAID, BookingStatus.PENDING_PAYMENT, BookingStatus.PARTIALLY_PAID] as BookingStatus[]).includes(b.status)
   );
   
   const pastBookings = bookings.filter((b) => 
-    ["COMPLETED"].includes(b.status)
+    ([BookingStatus.COMPLETED] as BookingStatus[]).includes(b.status)
   );
   
   const waitlistedBookings = bookings.filter((b) => 
-    ["WAITLISTED"].includes(b.status)
+    ([BookingStatus.WAITLISTED] as BookingStatus[]).includes(b.status)
   );
 
   const cancelledBookings = bookings.filter((b) => 
-    ["CANCELLED"].includes(b.status)
+    ([BookingStatus.CANCELLED, BookingStatus.NO_SHOW] as BookingStatus[]).includes(b.status)
   );
 
-  const renderBookingCard = (booking: Booking) => {
-    const trip = getTripById(booking.tripId);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const renderBookingCard = (booking: any) => {
+    const trip = booking.trip;
     if (!trip) return null;
+
+    const tripDate = trip.startDate ? new Date(trip.startDate) : new Date();
+    const endDate = trip.endDate ? new Date(trip.endDate) : new Date();
 
     return (
       <Link
@@ -40,7 +50,7 @@ export default function MyTripsPage() {
       >
         <div className="relative w-1/3 min-w-[120px] max-w-[140px] sm:w-48 sm:max-w-none">
           <Image
-            src={trip.images?.[0]?.url || trip.coverImage || "/placeholder.jpg"}
+            src={trip.coverImage || "/placeholder.jpg"}
             alt={trip.title}
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -50,7 +60,7 @@ export default function MyTripsPage() {
               WAITLISTED
             </div>
           )}
-          {booking.status === "CANCELLED" && (
+          {["CANCELLED", "NO_SHOW"].includes(booking.status) && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm">
               <span className="rounded-full bg-red-500/90 px-3 py-1 text-xs font-bold text-white">
                 CANCELLED
@@ -67,7 +77,7 @@ export default function MyTripsPage() {
             <div className="mt-1 flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))] sm:text-sm">
               <span className="flex items-center gap-1">
                 <MapPin className="h-3 w-3" />
-                {trip.location}
+                {trip.location || "Multiple Locations"}
               </span>
             </div>
           </div>
@@ -76,7 +86,7 @@ export default function MyTripsPage() {
             <div className="flex flex-col">
               <span className="text-[10px] font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider">Dates</span>
               <span className="text-xs font-medium sm:text-sm">
-                {new Date(trip.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })} - {new Date(trip.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                {tripDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - {endDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
               </span>
             </div>
             

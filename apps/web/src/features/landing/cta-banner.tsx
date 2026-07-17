@@ -44,7 +44,7 @@ export function CtaBanner() {
                 </Link>
               </Button>
               <Button size="lg" variant="secondary" className="rounded-full bg-transparent text-white border-white/30 hover:bg-white/10" asChild>
-                <Link href="/signup">
+                <Link href="/auth">
                   Create Account
                 </Link>
               </Button>

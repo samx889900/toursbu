@@ -5,6 +5,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Home, Compass, User, Bell, Settings } from "lucide-react";
 import { motion } from "framer-motion";
+import { NotificationBell } from "./notification-bell";
 
 const navItems = [
   { label: "Home", href: "/dashboard", icon: Home },
@@ -55,17 +56,7 @@ export function StudentNav() {
           </nav>
 
           <div className="flex items-center gap-2">
-            <Link
-              href="/dashboard/notifications"
-              className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tbu-ring)]",
-                pathname === "/dashboard/notifications"
-                  ? "bg-[var(--tbu-blue-soft)] text-[var(--tbu-blue-press)]"
-                  : "text-[var(--tbu-muted)] hover:bg-[var(--tbu-surface)] hover:text-[var(--tbu-ink)]"
-              )}
-            >
-              <Bell className="h-5 w-5" />
-            </Link>
+            <NotificationBell />
             <Link
               href="/dashboard/settings"
               className={cn(

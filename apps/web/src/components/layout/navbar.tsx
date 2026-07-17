@@ -130,10 +130,10 @@ export function Navbar() {
                 ) : (
                   <>
                     <Button variant="ghost" asChild className="rounded-full">
-                      <Link href="/login">Log in</Link>
+                      <Link href="/auth">Log in</Link>
                     </Button>
                     <Button asChild className="rounded-full">
-                      <Link href="/signup">Sign up</Link>
+                      <Link href="/auth">Sign up</Link>
                     </Button>
                   </>
                 )}
@@ -193,10 +193,10 @@ export function Navbar() {
               ) : (
                 <>
                   <Button variant="outline" asChild className="w-full justify-center rounded-xl">
-                    <Link href="/login">Log in</Link>
+                    <Link href="/auth">Log in</Link>
                   </Button>
                   <Button asChild className="w-full justify-center rounded-xl">
-                    <Link href="/signup">Sign up</Link>
+                    <Link href="/auth">Sign up</Link>
                   </Button>
                 </>
               )}

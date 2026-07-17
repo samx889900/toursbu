@@ -17,11 +17,18 @@
     "build:api": "turbo build --filter=@toursbu/api"
   },
   "devDependencies": {
+    "prisma": "^5.22.0",
     "turbo": "^2.5.0",
     "typescript": "^5.7.0"
   },
   "packageManager": "npm@10.8.0",
   "engines": {
     "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "crypto": "^1.0.1",
+    "razorpay": "^2.9.8",
+    "resend": "^6.17.2"
   }
 }
