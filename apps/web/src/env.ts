@@ -33,4 +33,5 @@ export const env = createEnv({
   },
   // Treats empty strings as undefined
   emptyStringAsUndefined: true,
+  skipValidation: !!process.env.SKIP_ENV_VALIDATION || !!process.env.CI,
 });
