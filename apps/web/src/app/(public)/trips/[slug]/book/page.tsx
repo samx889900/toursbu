@@ -19,7 +19,7 @@ export default async function BookTripPage({
   // 2. Auth Check
   const session = await getSession();
   if (!session?.user) {
-    redirect(`/auth/signin?callbackUrl=/trips/${slug}/book`);
+    redirect(`/auth?callbackUrl=/trips/${slug}/book`);
   }
 
   // 3. Profile Completion Check

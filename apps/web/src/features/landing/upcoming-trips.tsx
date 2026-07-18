@@ -1,12 +1,14 @@
-"use client";
-
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { publishedTrips } from "@/lib/data/trips";
+import { TripService } from "@/services/trips";
+import { TripStatus } from "@prisma/client";
 import { TripCard } from "@/components/shared/trip-card";
 
-export function UpcomingTrips() {
-  const featured = publishedTrips.slice(0, 3);
+export async function UpcomingTrips() {
+  const { trips: featured } = await TripService.searchTrips({
+    status: TripStatus.PUBLISHED,
+    limit: 3,
+  });
 
   return (
     <section className="tbu-section bg-[var(--tbu-canvas)]" aria-labelledby="upcoming-heading">
