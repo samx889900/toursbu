@@ -6,7 +6,7 @@ import { Users, AlertCircle, Clock, CheckCircle2, ChevronRight } from "lucide-re
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-type WizardStep = "SELECT_COUNT" | "TRAVELER_DETAILS" | "REVIEW";
+type WizardStep = "SELECT_COUNT" | "TRAVELER_DETAILS" | "REVIEW" | "DOCUMENTS";
 
 interface BookingWizardProps {
   tripId: string;
@@ -23,6 +23,7 @@ export function BookingWizard({ tripId, tripTitle, remainingSeats, price, advanc
   const [isLocking, setIsLocking] = useState(false);
   const [lockId, setLockId] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
+  const [bookingId, setBookingId] = useState<string | null>(null);
   
   // State for forms
   const [travelers, setTravelers] = useState<any[]>([]);
@@ -40,7 +41,7 @@ export function BookingWizard({ tripId, tripTitle, remainingSeats, price, advanc
       
       // Initialize traveler forms
       const initialTravelers = Array.from({ length: travelerCount }).map((_, i) => ({
-        name: "", email: "", phone: "", gender: "MALE", dateOfBirth: "", governmentIdType: "AADHAAR", governmentIdNumber: "", dietaryPreference: "NONE"
+        name: "", email: "", phone: "", gender: "MALE", dateOfBirth: "", governmentIdType: "AADHAAR", governmentIdNumber: "", dietaryPreference: null
       }));
       setTravelers(initialTravelers);
       
@@ -68,13 +69,13 @@ export function BookingWizard({ tripId, tripTitle, remainingSeats, price, advanc
       </div>
 
       {/* Progress */}
-      <div className="flex border-b border-gray-100">
-        {(["SELECT_COUNT", "TRAVELER_DETAILS", "REVIEW"] as WizardStep[]).map((s, index) => {
-          const stepLabels = ["Select Seats", "Traveler Info", "Review"];
+      <div className="flex border-b border-gray-100 overflow-x-auto whitespace-nowrap">
+        {(["SELECT_COUNT", "TRAVELER_DETAILS", "REVIEW", "DOCUMENTS"] as WizardStep[]).map((s, index) => {
+          const stepLabels = ["Select Seats", "Traveler Info", "Review", "Documents"];
           const isActive = step === s;
-          const isPast = ["SELECT_COUNT", "TRAVELER_DETAILS", "REVIEW"].indexOf(step) > index;
+          const isPast = ["SELECT_COUNT", "TRAVELER_DETAILS", "REVIEW", "DOCUMENTS"].indexOf(step) > index;
           return (
-            <div key={s} className={`flex-1 p-4 text-center text-sm font-bold border-b-2 transition-colors ${isActive ? "border-black text-black" : isPast ? "border-green-500 text-green-600" : "border-transparent text-gray-400"}`}>
+            <div key={s} className={`flex-1 p-4 px-6 md:px-4 text-center text-sm font-bold border-b-2 transition-colors ${isActive ? "border-black text-black" : isPast ? "border-green-500 text-green-600" : "border-transparent text-gray-400"}`}>
               {index + 1}. {stepLabels[index]}
             </div>
           );
@@ -321,10 +322,12 @@ export function BookingWizard({ tripId, tripTitle, remainingSeats, price, advanc
                   });
                   setIsLocking(false);
 
-                  if (result.success) {
+                  if (result.success && result.data) {
                     toast.success("Booking draft created!");
-                    // Redirect to payment page (Phase 2)
-                    router.push(`/trips/${tripId}/book/payment?bookingId=${result.data?.id}`);
+                    setBookingId(result.data.id);
+                    // Fetch traveler IDs to map for document upload
+                    setTravelers(result.data.travelers);
+                    setStep("DOCUMENTS");
                   } else {
                     toast.error(result.error || "Failed to create booking");
                   }
@@ -333,6 +336,83 @@ export function BookingWizard({ tripId, tripTitle, remainingSeats, price, advanc
                 className="px-8 py-4 bg-green-600 text-white rounded-xl font-bold text-lg hover:bg-green-700 transition-colors shadow-lg shadow-green-600/20 disabled:opacity-50"
               >
                 {isLocking ? "Processing..." : `Pay ₹${(advanceAmount * travelerCount).toLocaleString()} Advance`}
+              </button>
+            </div>
+          </div>
+        )}
+
+      {step === "DOCUMENTS" && (
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Upload Government ID</h3>
+            <p className="text-gray-500 mb-6">Please upload a valid Aadhar card or Passport for each traveler.</p>
+            
+            <div className="space-y-6 mb-8">
+              {travelers.map((t, index) => (
+                <div key={t.id || index} className="p-4 border border-gray-200 rounded-xl bg-gray-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h4 className="font-bold text-gray-900">{t.name}</h4>
+                    <p className="text-sm text-gray-500">{t.governmentIdType}: {t.governmentIdNumber}</p>
+                  </div>
+                  <div>
+                    <input 
+                      type="file" 
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        
+                        const formData = new FormData();
+                        formData.append("file", file);
+                        formData.append("bookingId", bookingId!);
+                        formData.append("travelerId", t.id);
+                        formData.append("type", t.governmentIdType);
+                        
+                        const loadingToast = toast.loading(`Uploading for ${t.name}...`);
+                        try {
+                          const res = await fetch("/api/documents/upload", {
+                            method: "POST",
+                            body: formData,
+                          });
+                          const data = await res.json();
+                          if (data.success) {
+                            toast.success(`Uploaded successfully`, { id: loadingToast });
+                            // Mark this traveler as having uploaded (could save to local state to show a checkmark)
+                            const updated = [...travelers];
+                            updated[index].uploaded = true;
+                            setTravelers(updated);
+                          } else {
+                            toast.error(data.error || "Upload failed", { id: loadingToast });
+                          }
+                        } catch (err) {
+                          toast.error("Network error during upload", { id: loadingToast });
+                        }
+                      }}
+                      className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800"
+                    />
+                    {t.uploaded && <CheckCircle2 className="w-5 h-5 text-green-500 inline-block ml-2" />}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-between items-center border-t border-gray-100 pt-6">
+              <button 
+                onClick={() => {
+                  toast.info("You can upload documents later from your dashboard.");
+                  router.push(`/trips/${tripId}/book/payment?bookingId=${bookingId}`);
+                }}
+                className="px-6 py-3 text-gray-600 font-medium hover:text-black transition-colors"
+              >
+                Skip for now
+              </button>
+              
+              <button 
+                onClick={() => {
+                  router.push(`/trips/${tripId}/book/payment?bookingId=${bookingId}`);
+                }}
+                className="px-8 py-4 bg-green-600 text-white rounded-xl font-bold text-lg hover:bg-green-700 transition-colors shadow-lg shadow-green-600/20"
+              >
+                Proceed to Payment
               </button>
             </div>
           </div>

@@ -80,10 +80,10 @@ export function EmailForm({ onSubmit, loading, disabled }: EmailFormProps) {
         className={cn(
           "flex w-full items-center justify-center gap-2",
           "h-14 rounded-full text-[15px] font-semibold",
-          "bg-[var(--tbu-blue)] text-white shadow-tbu-blue",
+          "bg-tbu-blue text-white shadow-tbu-blue",
           "transition-all duration-200 btn-press",
-          "hover:bg-[var(--tbu-blue-hover)]",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tbu-ring)] focus-visible:ring-offset-2",
+          "hover:bg-tbu-blue-hover",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tbu-ring focus-visible:ring-offset-2",
           "disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
         )}
         aria-label="Continue with email"

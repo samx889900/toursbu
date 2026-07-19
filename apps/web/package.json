@@ -22,6 +22,8 @@
     "@toursbu/config": "*",
     "@toursbu/types": "*",
     "@toursbu/utils": "*",
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^3.0.3",
     "better-auth": "^1.6.23",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",

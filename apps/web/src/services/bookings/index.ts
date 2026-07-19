@@ -164,6 +164,9 @@ export class BookingService {
           create: data.emergencyContacts,
         },
       },
+      include: {
+        travelers: true,
+      }
     });
 
     // 3. Log event

@@ -15,7 +15,7 @@ const supabase = createClient(
   }
 );
 
-export type BucketName = "trip-covers" | "trip-gallery" | "brochures";
+export type BucketName = "trip-covers" | "trip-gallery" | "brochures" | "booking-documents";
 
 export interface UploadOptions {
   bucket: BucketName;
@@ -123,6 +123,64 @@ export class StorageService {
       .getPublicUrl(path);
 
     return publicUrlData.publicUrl;
+  }
+
+  /**
+   * Upload a traveler document (Aadhaar, Passport, etc.) to a private bucket.
+   * Only returns the storage path, since the bucket is private.
+   */
+  static async uploadTravelerDocument(file: File, tripId: string, travelerId: string): Promise<{ path: string, size: number, mimeType: string }> {
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB limit
+    if (file.size > MAX_SIZE) {
+      throw new Error(`File size exceeds 5MB limit: ${file.size}`);
+    }
+
+    const allowedMimeTypes = ["application/pdf", "image/jpeg", "image/png", "image/jpg"];
+    if (!allowedMimeTypes.includes(file.type)) {
+      throw new Error("Invalid file type. Only PDF, JPG, and PNG are allowed.");
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    // File name like: tripId/travelerId/uuid-filename.ext
+    const ext = file.name.split('.').pop();
+    const filename = `${uuidv4()}.${ext}`;
+    const path = `${tripId}/${travelerId}/${filename}`;
+
+    const { error } = await supabase.storage
+      .from("booking-documents")
+      .upload(path, buffer, {
+        contentType: file.type,
+        upsert: false,
+      });
+
+    if (error) {
+      console.error("Supabase upload error:", error);
+      throw new Error(`Failed to upload document: ${error.message}`);
+    }
+
+    return {
+      path,
+      size: file.size,
+      mimeType: file.type
+    };
+  }
+
+  /**
+   * Generates a signed URL for private bucket files.
+   */
+  static async getSignedUrl(bucket: BucketName, path: string, expiresIn: number = 300): Promise<string> {
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(path, expiresIn);
+
+    if (error) {
+      console.error("Failed to generate signed URL:", error);
+      throw new Error(`Failed to generate signed URL: ${error.message}`);
+    }
+
+    return data.signedUrl;
   }
 
   /**

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { signIn } from "@/lib/auth/client";
+import { signIn, emailOtp } from "@/lib/auth/client";
 import { AuthState, AuthError, AuthUser, AuthProvider } from "@/services/auth";
 
 // We use the imported types from @/services/auth
@@ -14,6 +14,8 @@ export interface UseAuthReturn {
   email: string | null;
   otpExpiresIn: number;
   signInWithProvider: (provider: AuthProvider) => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<void>;
+  setPassword: (password: string) => Promise<void>;
   sendOTP: (email: string) => Promise<void>;
   verifyOTP: (code: string) => Promise<void>;
   resendOTP: () => Promise<void>;
@@ -67,8 +69,9 @@ export function useAuth(): UseAuthReturn {
     setError(null);
     setEmail(emailAddress);
 
-    const { error } = await signIn.emailOtp({
+    const { error } = await emailOtp.sendVerificationOtp({
       email: emailAddress,
+      type: "sign-in"
     });
 
     if (error) {
@@ -77,6 +80,48 @@ export function useAuth(): UseAuthReturn {
     } else {
       setOtpExpiresIn(300); // 5 minutes
       setState("otp_sent");
+    }
+  }, []);
+
+  const signInWithPassword = useCallback(async (emailAddress: string, password: string) => {
+    setState("loading");
+    setError(null);
+    setEmail(emailAddress);
+
+    const { data, error } = await signIn.email({
+      email: emailAddress,
+      password,
+    });
+
+    if (error) {
+      setError({ message: error.message || "Invalid email or password", code: error.status?.toString() || "401", retryable: true } as AuthError);
+      setState("error");
+    } else {
+      setUser(data.user as unknown as AuthUser);
+      setState("success");
+    }
+  }, []);
+
+  const setPassword = useCallback(async (password: string) => {
+    setState("loading");
+    setError(null);
+
+    try {
+      const res = await fetch("/api/auth/set-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to set password");
+      }
+
+      setState("success");
+    } catch (err: any) {
+      setError({ message: err.message || "Failed to set password", code: "500", retryable: true } as AuthError);
+      setState("create_password"); // Go back to create password state
     }
   }, []);
 
@@ -97,7 +142,8 @@ export function useAuth(): UseAuthReturn {
         setState("otp_sent"); // stay on OTP screen
       } else {
         setUser(data.user as unknown as AuthUser);
-        setState("success");
+        // After verifying OTP, transition to create_password instead of success
+        setState("create_password");
       }
     },
     [email]
@@ -115,6 +161,8 @@ export function useAuth(): UseAuthReturn {
     email,
     otpExpiresIn,
     signInWithProvider,
+    signInWithPassword,
+    setPassword,
     sendOTP,
     verifyOTP,
     resendOTP,

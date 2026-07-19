@@ -7,7 +7,7 @@ import { CheckCircle2, ChevronLeft, Download, ExternalLink, MessageSquare, Plus,
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-import { promoteWaitlistAction } from "@/actions/admin-actions";
+import { promoteWaitlistAction, verifyDocumentAction } from "@/actions/admin-actions";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -224,23 +224,75 @@ export function AdminBookingClient({ booking }: { booking: any }) {
         )}
 
         {activeTab === "docs" && (
-          <div className="bg-white rounded-xl border shadow-sm p-6">
-            <h3 className="font-bold mb-4">Receipts & Invoices</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {booking.receipts.map((r: any) => (
-                <div key={r.id} className="flex items-center justify-between p-4 border rounded-lg hover:border-blue-300 transition-colors">
-                  <div>
-                    <p className="font-medium text-sm">{r.receiptNumber}</p>
-                    <p className="text-xs text-gray-500">{new Date(r.createdAt).toLocaleDateString()}</p>
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl border shadow-sm p-6">
+              <h3 className="font-bold mb-4">Traveler Documents (Government IDs)</h3>
+              <div className="space-y-4">
+                {booking.travelers.map((t: any) => (
+                  <div key={t.id} className="p-4 bg-gray-50 rounded-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <p className="font-bold">{t.name}</p>
+                      <p className="text-sm text-gray-500">{t.governmentIdType}: {t.governmentIdNumber}</p>
+                    </div>
+                    <div>
+                      {t.documents && t.documents.length > 0 ? (
+                        t.documents.map((doc: any) => (
+                          <div key={doc.id} className="flex items-center gap-3">
+                            <span className={cn(
+                              "text-xs font-bold px-2 py-1 rounded-full",
+                              doc.verified ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+                            )}>
+                              {doc.verified ? "Verified" : "Pending"}
+                            </span>
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href={`/api/documents/download?id=${doc.id}`} target="_blank">View</Link>
+                            </Button>
+                            {!doc.verified ? (
+                              <Button variant="default" size="sm" onClick={async () => {
+                                const res = await verifyDocumentAction(doc.id, true);
+                                if (res.success) {
+                                  toast.success("Document verified");
+                                  router.refresh();
+                                }
+                              }}>Verify</Button>
+                            ) : (
+                              <Button variant="destructive" size="sm" onClick={async () => {
+                                const res = await verifyDocumentAction(doc.id, false);
+                                if (res.success) {
+                                  toast.success("Document rejected");
+                                  router.refresh();
+                                }
+                              }}>Reject</Button>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <span className="text-sm text-red-500 font-medium">No document uploaded</span>
+                      )}
+                    </div>
                   </div>
-                  {r.pdfUrl ? (
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={r.pdfUrl} target="_blank"><Download className="w-4 h-4 mr-2" /> Download</Link>
-                    </Button>
-                  ) : <span className="text-xs text-gray-400">Processing</span>}
-                </div>
-              ))}
-              {booking.receipts.length === 0 && <p className="text-sm text-gray-500">No documents found.</p>}
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border shadow-sm p-6">
+              <h3 className="font-bold mb-4">Receipts & Invoices</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {booking.receipts.map((r: any) => (
+                  <div key={r.id} className="flex items-center justify-between p-4 border rounded-lg hover:border-blue-300 transition-colors">
+                    <div>
+                      <p className="font-medium text-sm">{r.receiptNumber}</p>
+                      <p className="text-xs text-gray-500">{new Date(r.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    {r.pdfUrl ? (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={r.pdfUrl} target="_blank"><Download className="w-4 h-4 mr-2" /> Download</Link>
+                      </Button>
+                    ) : <span className="text-xs text-gray-400">Processing</span>}
+                  </div>
+                ))}
+                {booking.receipts.length === 0 && <p className="text-sm text-gray-500">No documents found.</p>}
+              </div>
             </div>
           </div>
         )}

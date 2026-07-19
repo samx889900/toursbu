@@ -10,7 +10,11 @@ export default async function AdminBookingPage(props: { params: Promise<{ id: st
       user: true,
       trip: true,
       travelers: {
-        include: { roomAllocation: { include: { room: true } }, busAllocation: { include: { bus: true } } }
+        include: { 
+          roomAllocation: { include: { room: true } }, 
+          busAllocation: { include: { bus: true } },
+          documents: true
+        }
       },
       emergencyContacts: true,
       payments: { orderBy: { createdAt: "desc" } },

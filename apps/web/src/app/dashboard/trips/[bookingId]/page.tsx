@@ -39,7 +39,11 @@ export default async function TripJourneyPage(props: {
         include: { days: true, whatsappGroup: true }
       },
       travelers: {
-        include: { roomAllocation: { include: { room: true } }, busAllocation: { include: { bus: true } } }
+        include: { 
+          roomAllocation: { include: { room: true } }, 
+          busAllocation: { include: { bus: true } },
+          documents: true
+        }
       },
       emergencyContacts: true,
       payments: { orderBy: { createdAt: "desc" } },
@@ -323,29 +327,67 @@ export default async function TripJourneyPage(props: {
         )}
 
         {activeTab === "documents" && (
-          <div className="bg-white rounded-xl border p-6 shadow-sm">
-            <h3 className="text-lg font-bold mb-6">Booking Documents</h3>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {booking.receipts.length > 0 ? booking.receipts.map(receipt => (
-                <div key={receipt.id} className="flex items-center justify-between p-4 border rounded-lg hover:border-blue-300 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <FileText className="w-6 h-6 text-blue-500" />
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl border p-6 shadow-sm">
+              <h3 className="text-lg font-bold mb-6">Government IDs & Documents</h3>
+              <div className="space-y-4">
+                {booking.travelers.map(t => (
+                  <div key={t.id} className="p-4 border rounded-lg bg-gray-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <div className="font-medium text-sm">{receipt.receiptNumber}</div>
-                      <div className="text-xs text-gray-500">{new Date(receipt.createdAt).toLocaleDateString()}</div>
+                      <h4 className="font-bold text-gray-900">{t.name}</h4>
+                      <p className="text-sm text-gray-500">{t.governmentIdType}: {t.governmentIdNumber}</p>
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                      {t.documents && t.documents.length > 0 ? (
+                        t.documents.map(doc => (
+                          <div key={doc.id} className="flex items-center gap-3">
+                            <span className={cn(
+                              "text-xs font-bold px-2 py-1 rounded-full",
+                              doc.verified ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+                            )}>
+                              {doc.verified ? "🟢 Verified" : "🟡 Pending Review"}
+                            </span>
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href={`/api/documents/download?id=${doc.id}`} target="_blank">
+                                <Download className="w-4 h-4 mr-2" /> View
+                              </Link>
+                            </Button>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-sm text-red-500 font-medium">Missing Document</div>
+                      )}
                     </div>
                   </div>
-                  {receipt.pdfUrl ? (
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/api/documents/download?type=receipt&id=${receipt.id}`} target="_blank"><Download className="w-4 h-4 mr-2" /> Download</Link>
-                    </Button>
-                  ) : (
-                    <span className="text-xs text-gray-400">Generating...</span>
-                  )}
-                </div>
-              )) : (
-                <p className="text-sm text-gray-500 col-span-2">No receipts generated yet.</p>
-              )}
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border p-6 shadow-sm">
+              <h3 className="text-lg font-bold mb-6">Booking Receipts</h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {booking.receipts.length > 0 ? booking.receipts.map(receipt => (
+                  <div key={receipt.id} className="flex items-center justify-between p-4 border rounded-lg hover:border-blue-300 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <FileText className="w-6 h-6 text-blue-500" />
+                      <div>
+                        <div className="font-medium text-sm">{receipt.receiptNumber}</div>
+                        <div className="text-xs text-gray-500">{new Date(receipt.createdAt).toLocaleDateString()}</div>
+                      </div>
+                    </div>
+                    {receipt.pdfUrl ? (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={receipt.pdfUrl} target="_blank"><Download className="w-4 h-4 mr-2" /> Download</Link>
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-gray-400">Generating...</span>
+                    )}
+                  </div>
+                )) : (
+                  <p className="text-sm text-gray-500 col-span-2">No receipts generated yet.</p>
+                )}
+              </div>
             </div>
           </div>
         )}

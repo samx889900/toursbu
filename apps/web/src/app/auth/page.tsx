@@ -10,15 +10,18 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthHeader } from "@/components/auth/AuthHeader";
 import { SocialLoginButtons } from "@/components/auth/SocialLoginButtons";
 import { AuthDivider } from "@/components/auth/AuthDivider";
-import { EmailForm } from "@/components/auth/EmailForm";
+import { AuthForm } from "@/components/auth/AuthForm";
 import { OTPForm } from "@/components/auth/OTPForm";
+import { CreatePasswordForm } from "@/components/auth/CreatePasswordForm";
 import { TermsCheckbox } from "@/components/auth/TermsCheckbox";
 import { AuthFooter } from "@/components/auth/AuthFooter";
 import { LoadingOverlay } from "@/components/auth/LoadingOverlay";
 import { ProfileCompletionService } from "@/services/auth/ProfileCompletionService";
+import { cn } from "@/lib/utils";
 
 /** Auth page state machine */
-type AuthView = "providers" | "otp";
+type AuthView = "providers" | "otp" | "create_password";
+type AuthMode = "signin" | "signup";
 
 const PHOTO_URL =
   "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=2070&auto=format&fit=crop";
@@ -28,6 +31,7 @@ export default function AuthPage() {
   const auth = useAuth();
 
   const [view, setView] = useState<AuthView>("providers");
+  const [mode, setMode] = useState<AuthMode>("signin");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [termsError, setTermsError] = useState(false);
   const [activeProvider, setActiveProvider] = useState<AuthProvider | null>(null);
@@ -50,17 +54,29 @@ export default function AuthPage() {
     [requireTerms, auth]
   );
 
-  const handleEmailSubmit = useCallback(
-    (email: string) => {
+  const handleAuthSubmit = useCallback(
+    (email: string, password?: string) => {
       if (!requireTerms()) return;
-      auth.sendOTP(email);
+      
+      if (mode === "signin" && password) {
+        auth.signInWithPassword(email, password);
+      } else {
+        auth.sendOTP(email);
+      }
     },
-    [requireTerms, auth]
+    [requireTerms, auth, mode]
   );
 
   const handleVerifyOTP = useCallback(
     (code: string) => {
       auth.verifyOTP(code);
+    },
+    [auth]
+  );
+
+  const handleCreatePassword = useCallback(
+    (password: string) => {
+      auth.setPassword(password);
     },
     [auth]
   );
@@ -71,9 +87,13 @@ export default function AuthPage() {
     setActiveProvider(null);
   }, [auth]);
 
-  // Transition to OTP view when OTP is sent
+  // Transition views based on auth state
   if (auth.state === "otp_sent" && view !== "otp") {
     setView("otp");
+  }
+  
+  if (auth.state === "create_password" && view !== "create_password") {
+    setView("create_password");
   }
 
   // Redirect on success after a brief delay for the animation
@@ -115,9 +135,36 @@ export default function AuthPage() {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.2 }}
                   >
+                    <div className="flex gap-4 mb-6 border-b border-[var(--tbu-hairline)]">
+                      <button
+                        onClick={() => { setMode("signin"); auth.clearError(); }}
+                        className={cn(
+                          "pb-3 text-sm font-semibold transition-colors relative",
+                          mode === "signin" ? "text-tbu-blue" : "text-[var(--tbu-muted)] hover:text-[var(--tbu-ink)]"
+                        )}
+                      >
+                        Sign In
+                        {mode === "signin" && (
+                          <motion.div layoutId="auth-tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-tbu-blue" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => { setMode("signup"); auth.clearError(); }}
+                        className={cn(
+                          "pb-3 text-sm font-semibold transition-colors relative",
+                          mode === "signup" ? "text-tbu-blue" : "text-[var(--tbu-muted)] hover:text-[var(--tbu-ink)]"
+                        )}
+                      >
+                        Sign Up
+                        {mode === "signup" && (
+                          <motion.div layoutId="auth-tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-tbu-blue" />
+                        )}
+                      </button>
+                    </div>
+
                     <AuthHeader
-                      title="Welcome"
-                      description="Sign in to discover and book curated student trips."
+                      title={mode === "signin" ? "Welcome back" : "Create an account"}
+                      description={mode === "signin" ? "Sign in to access your bookings." : "Sign up to discover and book curated student trips."}
                     />
 
                     <SocialLoginButtons
@@ -129,11 +176,24 @@ export default function AuthPage() {
 
                     <AuthDivider />
 
-                    <EmailForm
-                      onSubmit={handleEmailSubmit}
+                    <AuthForm
+                      mode={mode}
+                      onSubmit={handleAuthSubmit}
                       loading={isLoading && activeProvider === null}
                       disabled={auth.state === "success"}
                     />
+
+                    {mode === "signin" && (
+                      <div className="mt-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setMode("signup")}
+                          className="text-xs text-[var(--tbu-muted)] hover:text-[var(--tbu-ink)] underline underline-offset-2"
+                        >
+                          Forgot password? Sign in with OTP instead
+                        </button>
+                      </div>
+                    )}
 
                     <TermsCheckbox
                       checked={termsAccepted}
@@ -164,12 +224,12 @@ export default function AuthPage() {
 
                     <AuthFooter />
                   </motion.div>
-                ) : (
+                ) : view === "otp" ? (
                   <motion.div
                     key="otp"
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
+                    exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.2 }}
                   >
                     <AuthHeader
@@ -185,7 +245,28 @@ export default function AuthPage() {
                       loading={auth.state === "verifying"}
                       error={auth.error?.message || null}
                       expiresIn={auth.otpExpiresIn}
-                      verified={auth.state === "success"}
+                      verified={auth.state === "success" || auth.state === "create_password"}
+                    />
+
+                    <AuthFooter />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="create_password"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <AuthHeader
+                      title="Create a Password"
+                      description="Set a password for your account so you can sign in easily next time."
+                    />
+
+                    <CreatePasswordForm
+                      onSubmit={handleCreatePassword}
+                      loading={auth.state === "loading"}
+                      error={auth.error?.message || null}
                     />
 
                     <AuthFooter />

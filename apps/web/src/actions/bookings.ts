@@ -65,7 +65,7 @@ export async function createDraftBookingAction(data: {
         dateOfBirth: t.dateOfBirth ? new Date(t.dateOfBirth) : undefined,
         governmentIdType: t.governmentIdType,
         governmentIdNumber: t.governmentIdNumber,
-        dietaryPreference: t.dietaryPreference,
+        dietaryPreference: t.dietaryPreference === "NONE" ? undefined : t.dietaryPreference,
         isPrimary: index === 0, // First traveler is primary
         medicalInfo: t.medicalInfo,
       })),

@@ -476,6 +476,8 @@ model BookingTraveler {
   isPrimary   Boolean @default(false)
   medicalInfo String? @db.Text
 
+  documents   TravelerDocument[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -868,3 +870,29 @@ model BookingChecklistItem {
   @@map("booking_checklist_item")
 }
 
+enum DocumentType {
+  AADHAAR
+  PASSPORT
+  COLLEGE_ID
+  CONSENT_FORM
+  OTHER
+}
+
+model TravelerDocument {
+  id          String   @id @default(cuid())
+
+  travelerId  String
+  traveler    BookingTraveler @relation(fields: [travelerId], references: [id], onDelete: Cascade)
+
+  type        DocumentType
+  fileName    String
+  storagePath String
+  mimeType    String
+  size        Int
+
+  verified    Boolean  @default(false)
+  verifiedBy  String?
+  verifiedAt  DateTime?
+
+  createdAt   DateTime @default(now())
+}

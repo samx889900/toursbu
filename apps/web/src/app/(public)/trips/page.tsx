@@ -8,11 +8,10 @@ import Image from "next/image";
 // Revalidate this page every hour, or on demand when a trip is published
 export const revalidate = 3600;
 
-export default async function ExplorePage({
-  searchParams,
-}: {
-  searchParams: { q?: string; category?: string };
+export default async function ExplorePage(props: {
+  searchParams: Promise<{ q?: string; category?: string }>;
 }) {
+  const searchParams = await props.searchParams;
   const query = searchParams.q || "";
   const categoryId = searchParams.category || "";
 

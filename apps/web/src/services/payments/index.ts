@@ -4,6 +4,7 @@ import { BookingService } from "@/services/bookings";
 import crypto from "crypto";
 import { PaymentAttemptStatus, PaymentStatus, BookingStatus, EventType } from "@prisma/client";
 import { DocumentService } from "@/services/documents";
+import { env } from "@/env";
 
 export class PaymentService {
   /**
@@ -68,7 +69,7 @@ export class PaymentService {
    * Verifies the Razorpay webhook signature.
    */
   static verifyWebhookSignature(body: string, signature: string): boolean {
-    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    const secret = env.RAZORPAY_WEBHOOK_SECRET;
     if (!secret) {
       console.warn("RAZORPAY_WEBHOOK_SECRET is not set");
       return false;
@@ -198,6 +199,41 @@ export class PaymentService {
     }
 
     return { status: "processed", bookingId: booking.id };
+  }
+
+  /**
+   * Verifies the frontend signature and processes the payment directly.
+   * This provides instant UX without waiting for the webhook.
+   */
+  static async verifyFrontendSignatureAndProcess(orderId: string, paymentId: string, signature: string) {
+    const secret = env.RAZORPAY_KEY_SECRET;
+    if (!secret) {
+      throw new Error("RAZORPAY_KEY_SECRET is not set");
+    }
+
+    const expectedSignature = crypto
+      .createHmac("sha256", secret)
+      .update(`${orderId}|${paymentId}`)
+      .digest("hex");
+
+    if (expectedSignature !== signature) {
+      throw new Error("Invalid signature");
+    }
+
+    // Fetch the payment from Razorpay to get the actual amount and details
+    const payment = await razorpay.payments.fetch(paymentId);
+    if (!payment) throw new Error("Payment not found in Razorpay");
+
+    // Reuse the robust webhook logic to process the payment and ensure idempotency
+    const payload = {
+      payload: {
+        payment: {
+          entity: payment
+        }
+      }
+    };
+
+    return await this.processPaymentSuccess(payload);
   }
 
   /**

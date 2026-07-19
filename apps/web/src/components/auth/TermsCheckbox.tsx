@@ -11,13 +11,14 @@ interface TermsCheckboxProps {
 export function TermsCheckbox({ checked, onChange, error }: TermsCheckboxProps) {
   return (
     <div className="mt-6">
-      <label className="flex items-start gap-3 cursor-pointer group">
+      <label htmlFor="terms" className="flex items-start gap-3 cursor-pointer group">
         <div className="relative mt-0.5">
           <input
+            id="terms"
             type="checkbox"
             checked={checked}
             onChange={(e) => onChange(e.target.checked)}
-            className="sr-only peer"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer peer"
             aria-label="Accept terms and conditions"
           />
           <div
@@ -26,7 +27,7 @@ export function TermsCheckbox({ checked, onChange, error }: TermsCheckboxProps) 
               "flex items-center justify-center shrink-0",
               "peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--tbu-ring)] peer-focus-visible:ring-offset-2",
               checked
-                ? "bg-[var(--tbu-blue)] border-[var(--tbu-blue)]"
+                ? "bg-tbu-blue border-tbu-blue"
                 : error
                   ? "border-[var(--tbu-danger)]"
                   : "border-[var(--tbu-hairline-strong)] group-hover:border-[var(--tbu-ink)]"
@@ -53,7 +54,7 @@ export function TermsCheckbox({ checked, onChange, error }: TermsCheckboxProps) 
             href="/terms"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-semibold text-[var(--tbu-ink)] underline underline-offset-2 hover:text-[var(--tbu-blue)] transition-colors"
+            className="font-semibold text-[var(--tbu-ink)] underline underline-offset-2 hover:text-tbu-blue transition-colors"
             onClick={(e) => e.stopPropagation()}
           >
             Terms &amp; Conditions
@@ -63,7 +64,7 @@ export function TermsCheckbox({ checked, onChange, error }: TermsCheckboxProps) 
             href="/privacy"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-semibold text-[var(--tbu-ink)] underline underline-offset-2 hover:text-[var(--tbu-blue)] transition-colors"
+            className="font-semibold text-[var(--tbu-ink)] underline underline-offset-2 hover:text-tbu-blue transition-colors"
             onClick={(e) => e.stopPropagation()}
           >
             Privacy Policy

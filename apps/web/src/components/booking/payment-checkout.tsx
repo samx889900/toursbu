@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createRazorpayOrderAction } from "@/actions/payments";
+import { createRazorpayOrderAction, verifyRazorpayPaymentAction } from "@/actions/payments";
 import { AlertCircle, CreditCard, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -60,11 +60,22 @@ export function PaymentCheckout({ bookingId, amount, userName, userEmail, userPh
       name: "ToursBU",
       description: "Trip Advance Payment",
       order_id: orderId,
-      handler: function (response: any) {
-        // Success handler (Note: Never trust this blindly! Wait for Webhook)
-        // But for UX, we redirect the user to a "Processing/Success" page where they can see the timeline
-        toast.success("Payment successful! Verifying your booking...");
-        router.push(`/bookings/${bookingId}/success`);
+      handler: async function (response: any) {
+        toast.info("Verifying your payment...", { id: "payment_verify" });
+        setIsProcessing(true);
+        const verifyRes = await verifyRazorpayPaymentAction(
+          response.razorpay_order_id,
+          response.razorpay_payment_id,
+          response.razorpay_signature
+        );
+
+        if (verifyRes.success) {
+          toast.success("Payment successful and verified!", { id: "payment_verify" });
+          router.push(`/bookings/${bookingId}/success`);
+        } else {
+          toast.error(`Verification failed: ${verifyRes.error}`, { id: "payment_verify" });
+          setIsProcessing(false);
+        }
       },
       prefill: {
         name: userName,

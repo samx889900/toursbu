@@ -14,6 +14,7 @@ export type AuthState =
   | "loading"
   | "otp_sent"
   | "verifying"
+  | "create_password"
   | "success"
   | "error";
 

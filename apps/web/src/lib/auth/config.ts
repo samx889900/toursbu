@@ -21,12 +21,15 @@ export const auth = betterAuth({
   },
   user: {
     additionalFields: {
-      role: { type: "string" },
-      phone: { type: "string" },
-      college: { type: "string" },
-      emergencyContact: { type: "string" },
-      onboardingCompleted: { type: "boolean" },
+      role: { type: "string", required: false },
+      phone: { type: "string", required: false },
+      college: { type: "string", required: false },
+      emergencyContact: { type: "string", required: false },
+      onboardingCompleted: { type: "boolean", required: false },
     },
+  },
+  emailAndPassword: {
+    enabled: true,
   },
   socialProviders: getSocialProviders(),
   plugins: getAuthPlugins(),
