@@ -30,7 +30,7 @@ export function SignOutButton() {
 
   return (
     <Button 
-      variant="destructive" 
+      variant="danger" 
       onClick={handleSignOut}
       disabled={isLoading}
       className="gap-2 font-semibold shadow-sm"
