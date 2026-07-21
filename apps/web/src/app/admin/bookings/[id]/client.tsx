@@ -256,7 +256,7 @@ export function AdminBookingClient({ booking }: { booking: any }) {
                                 }
                               }}>Verify</Button>
                             ) : (
-                              <Button variant="destructive" size="sm" onClick={async () => {
+                              <Button variant="danger" size="sm" onClick={async () => {
                                 const res = await verifyDocumentAction(doc.id, false);
                                 if (res.success) {
                                   toast.success("Document rejected");
