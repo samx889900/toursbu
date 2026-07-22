@@ -120,7 +120,7 @@ export function useAuth(): UseAuthReturn {
 
       setState("success");
     } catch (err: any) {
-      setError({ message: err.message || "Failed to set password", code: "500", retryable: true } as AuthError);
+      setError({ message: err.message || "Failed to set password", code: "500", retryable: true } as unknown as AuthError);
       setState("create_password"); // Go back to create password state
     }
   }, []);

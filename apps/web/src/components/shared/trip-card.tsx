@@ -8,7 +8,7 @@ import type { Trip } from "@toursbu/types";
 import { Button } from "@/components/ui/button";
 
 interface TripCardProps {
-  trip: Trip;
+  trip: any;
   /** Whether to use whileInView animation (for scroll-triggered) or animate (for filter-triggered) */
   animationMode?: "scroll" | "instant";
   /** Animation delay index */
