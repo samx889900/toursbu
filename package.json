@@ -6,6 +6,7 @@
     "packages/*"
   ],
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
