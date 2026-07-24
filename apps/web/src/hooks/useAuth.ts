@@ -50,17 +50,21 @@ export function useAuth(): UseAuthReturn {
       return;
     }
 
-    const { error } = await signIn.social({
-      provider: provider as "google" | "apple" | "microsoft",
-      callbackURL: "/dashboard", // We'll handle exact redirection in middleware or UI
-    });
+    try {
+      const { error } = await signIn.social({
+        provider: provider as "google" | "apple" | "microsoft",
+        callbackURL: "/dashboard",
+      });
 
-    if (error) {
-      setError({ message: error.message || "Failed to sign in", code: error.status?.toString() || "500", retryable: true } as AuthError);
+      if (error) {
+        setError({ message: error.message || "Failed to sign in", code: error.status?.toString() || "500", retryable: true } as AuthError);
+        setState("error");
+      } else {
+        setState("success");
+      }
+    } catch (err: any) {
+      setError({ message: err.message || "Network error. Please try again.", code: "500", retryable: true } as AuthError);
       setState("error");
-    } else {
-      // Better auth redirects automatically for social login, but just in case
-      setState("success");
     }
   }, []);
 
