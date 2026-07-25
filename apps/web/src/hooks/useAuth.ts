@@ -57,13 +57,13 @@ export function useAuth(): UseAuthReturn {
       });
 
       if (error) {
-        setError({ message: error.message || "Failed to sign in", code: error.status?.toString() || "500", retryable: true } as AuthError);
+        setError({ message: error.message || "Failed to sign in", code: error.status?.toString() || "500", retryable: true } as unknown as AuthError);
         setState("error");
       } else {
         setState("success");
       }
     } catch (err: any) {
-      setError({ message: err.message || "Network error. Please try again.", code: "500", retryable: true } as AuthError);
+      setError({ message: err.message || "Network error. Please try again.", code: "500", retryable: true } as unknown as AuthError);
       setState("error");
     }
   }, []);
@@ -79,7 +79,7 @@ export function useAuth(): UseAuthReturn {
     });
 
     if (error) {
-      setError({ message: error.message || "Failed to send OTP", code: error.status?.toString() || "500", retryable: true } as AuthError);
+      setError({ message: error.message || "Failed to send OTP", code: error.status?.toString() || "500", retryable: true } as unknown as AuthError);
       setState("error");
     } else {
       setOtpExpiresIn(300); // 5 minutes
@@ -98,7 +98,7 @@ export function useAuth(): UseAuthReturn {
     });
 
     if (error) {
-      setError({ message: error.message || "Invalid email or password", code: error.status?.toString() || "401", retryable: true } as AuthError);
+      setError({ message: error.message || "Invalid email or password", code: error.status?.toString() || "401", retryable: true } as unknown as AuthError);
       setState("error");
     } else {
       setUser(data.user as unknown as AuthUser);
@@ -142,7 +142,7 @@ export function useAuth(): UseAuthReturn {
       });
 
       if (error) {
-        setError({ message: error.message || "Invalid or expired code", code: error.status?.toString() || "400", retryable: true } as AuthError);
+        setError({ message: error.message || "Invalid or expired code", code: error.status?.toString() || "400", retryable: true } as unknown as AuthError);
         setState("otp_sent"); // stay on OTP screen
       } else {
         setUser(data.user as unknown as AuthUser);
