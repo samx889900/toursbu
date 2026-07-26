@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import type { AuthProvider } from "@/services/auth";
+import { toast } from "sonner";
 
 import { AuthCard } from "@/components/auth/AuthCard";
 import { AuthHeader } from "@/components/auth/AuthHeader";
@@ -39,6 +40,7 @@ export default function AuthPage() {
   const requireTerms = useCallback((): boolean => {
     if (!termsAccepted) {
       setTermsError(true);
+      toast.error("Please accept the Terms & Conditions to continue.");
       return false;
     }
     setTermsError(false);

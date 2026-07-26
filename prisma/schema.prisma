@@ -896,3 +896,62 @@ model TravelerDocument {
 
   createdAt   DateTime @default(now())
 }
+
+// ─── Admin Authentication ────────────────────────────────────
+
+enum AdminRole {
+  SUPER_ADMIN
+  OPERATIONS_ADMIN
+  CONTENT_ADMIN
+  SUPPORT_ADMIN
+  ADMIN
+}
+
+model Admin {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  fullName      String
+  role          AdminRole @default(ADMIN)
+  isActive      Boolean   @default(true)
+
+  mustChangePassword Boolean @default(false)
+
+  lastLoginAt DateTime?
+  lastLoginIp String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions AdminSession[]
+
+  @@map("admin")
+}
+
+model AdminSession {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  adminId   String
+  admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([adminId])
+  @@index([token])
+  @@map("admin_session")
+}
+
+model AdminLoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ipAddress String?
+  userAgent String?
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([createdAt])
+  @@map("admin_login_attempt")
+}

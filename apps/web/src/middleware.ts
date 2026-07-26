@@ -1,50 +1,73 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/auth/server";
+import { getAdminSessionFromRequest } from "@/lib/auth/admin-session";
 import { canAccess } from "@/lib/auth/permissions";
 
-const protectedRoutes = [
+const studentProtectedRoutes = [
   "/dashboard",
-  "/admin",
   "/organizer",
   "/profile",
 ];
 
-// Routes that require authentication but aren't strictly starting with the prefixes above
-// e.g. /trips/[slug]/book
 const isDynamicProtectedRoute = (pathname: string) => {
   return pathname.startsWith("/trips/") && pathname.endsWith("/book");
 };
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
-  const isProtected = protectedRoutes.some(route => pathname.startsWith(route)) || isDynamicProtectedRoute(pathname);
-  
-  // Also, protect the auth routes from logged-in users (e.g. don't show login page if already logged in)
+
+  // ─── Admin Routes ──────────────────────────────────────────
+  if (pathname.startsWith("/admin")) {
+    // /admin/login is public
+    if (pathname === "/admin/login") {
+      // If already authenticated as admin, redirect to dashboard
+      const cookieHeader = request.headers.get("cookie");
+      const adminSession = await getAdminSessionFromRequest(cookieHeader);
+      if (adminSession) {
+        return NextResponse.redirect(new URL("/admin", request.url));
+      }
+      return NextResponse.next();
+    }
+
+    // All other /admin routes need admin session
+    const cookieHeader = request.headers.get("cookie");
+    const adminSession = await getAdminSessionFromRequest(cookieHeader);
+
+    if (!adminSession) {
+      return NextResponse.redirect(new URL("/admin/login", request.url));
+    }
+
+    // Admin-management routes require SUPER_ADMIN
+    if (pathname.startsWith("/admin/admins") && adminSession.admin.role !== "SUPER_ADMIN") {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
+
+    return NextResponse.next();
+  }
+
+  // ─── Student Routes ────────────────────────────────────────
+  const isStudentProtected =
+    studentProtectedRoutes.some((route) => pathname.startsWith(route)) ||
+    isDynamicProtectedRoute(pathname);
+
   const isAuthRoute = pathname.startsWith("/auth");
 
-  if (isProtected || isAuthRoute) {
+  if (isStudentProtected || isAuthRoute) {
     const session = await getSession();
 
-    // 1. Unauthenticated users trying to access protected routes
-    if (!session && isProtected) {
+    if (!session && isStudentProtected) {
       const redirectUrl = new URL("/auth", request.url);
-      // Save the intended destination
       redirectUrl.searchParams.set("redirectTo", pathname);
       return NextResponse.redirect(redirectUrl);
     }
 
-    // 2. Authenticated users trying to access login page
     if (session && isAuthRoute) {
-      const redirectUrl = new URL("/dashboard", request.url);
-      return NextResponse.redirect(redirectUrl);
+      return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
-    // 3. RBAC checks for authenticated users on protected routes
-    if (session && isProtected) {
+    if (session && isStudentProtected) {
       const hasPermission = canAccess(session.user.role, pathname);
       if (!hasPermission) {
-        // Redirect to dashboard or a 403 page
         return NextResponse.redirect(new URL("/dashboard", request.url));
       }
     }
@@ -55,7 +78,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Apply to all paths except api, _next/static, _next/image, favicon.ico
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 };

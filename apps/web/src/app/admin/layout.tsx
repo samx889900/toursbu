@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AdminSidebar } from "@/components/layout/sidebar";
 import { AdminGlobalSearch } from "@/components/layout/admin-search";
+import { getAdminSession } from "@/lib/auth/admin-session";
 
 export const metadata: Metadata = {
   title: "Admin · ToursBU",
@@ -8,14 +9,20 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getAdminSession();
+
   return (
     <div className="flex h-screen overflow-hidden bg-[hsl(var(--background))]">
-      <AdminSidebar />
+      <AdminSidebar
+        adminName={session?.admin.fullName}
+        adminEmail={session?.admin.email}
+        adminRole={session?.admin.role}
+      />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Admin Header */}
         <header className="h-16 border-b bg-white flex items-center px-4 sm:px-6 lg:px-8 justify-between shrink-0">

@@ -3,7 +3,12 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = 'vikrammadhad@gmail.com';
+  const email = process.argv[2];
+  
+  if (!email) {
+    console.error('Please provide an email address');
+    return;
+  }
   
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {

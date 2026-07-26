@@ -74,7 +74,7 @@ export function TermsCheckbox({ checked, onChange, error }: TermsCheckboxProps) 
 
       {error && !checked && (
         <p
-          className="mt-1.5 ml-8 text-[12px] font-medium text-[var(--tbu-danger)] animate-in fade-in slide-in-from-top-1 duration-200"
+          className="mt-1.5 ml-8 text-[12px] font-medium text-red-600 animate-in fade-in slide-in-from-top-1 duration-200"
           role="alert"
         >
           Please accept the terms to continue
