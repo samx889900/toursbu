@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth/server";
+import { getAdminSession } from "@/lib/auth/admin-session";
 import { CSVExportService } from "@/services/csv-export";
 
 export async function GET(request: Request) {
   try {
-    const session = await getSession();
-    if (!session?.user) {
+    const session = await getAdminSession();
+    if (!session?.admin) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
