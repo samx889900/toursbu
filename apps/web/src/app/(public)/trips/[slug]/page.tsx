@@ -56,8 +56,8 @@ export default async function TripDetailsPage({ params }: Props) {
     notFound();
   }
 
-  const coverImage = trip.images.find(img => img.isCover)?.url || trip.images[0]?.url;
-  const galleryImages = trip.images.filter(img => !img.isCover);
+  const coverImage = trip.images.find((img: any) => img.isCover)?.url || trip.images[0]?.url;
+  const galleryImages = trip.images.filter((img: any) => !img.isCover);
 
   // Generate JSON-LD Structured Data
   const breadcrumbSchema = {
@@ -76,7 +76,7 @@ export default async function TripDetailsPage({ params }: Props) {
     "name": trip.title,
     "description": trip.description || trip.shortDesc,
     "touristType": ["Student"],
-    "itinerary": trip.days.map((day, index) => ({
+    "itinerary": trip.days.map((day: any, index: number) => ({
       "@type": "City",
       "name": day.title,
       "position": index + 1
@@ -170,7 +170,7 @@ export default async function TripDetailsPage({ params }: Props) {
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-8">Itinerary</h2>
               <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-300 before:to-transparent">
-                {trip.days.map((day, index) => (
+                {trip.days.map((day: any, index: number) => (
                   <div key={day.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                     {/* Icon */}
                     <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-black text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
@@ -180,7 +180,7 @@ export default async function TripDetailsPage({ params }: Props) {
                     <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                       <h3 className="font-bold text-gray-900 text-lg mb-4">{day.title}</h3>
                       <div className="space-y-3">
-                        {day.activities.map((activity) => (
+                        {day.activities.map((activity: any) => (
                           <div key={activity.id} className="flex gap-3 text-sm">
                             <div className="text-gray-400 font-medium w-16 shrink-0">{activity.time || "All day"}</div>
                             <div className="text-gray-700">{activity.title}</div>
@@ -199,7 +199,7 @@ export default async function TripDetailsPage({ params }: Props) {
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Frequently Asked Questions</h2>
               <div className="space-y-4">
-                {trip.faqs.map((faq) => (
+                {trip.faqs.map((faq: any) => (
                   <details key={faq.id} className="group bg-white border border-gray-100 rounded-xl overflow-hidden [&_summary::-webkit-details-marker]:hidden">
                     <summary className="flex items-center justify-between p-6 cursor-pointer font-semibold text-gray-900">
                       {faq.question}

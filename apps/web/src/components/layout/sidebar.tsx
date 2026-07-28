@@ -41,6 +41,10 @@ const sidebarItems: SidebarItem[] = [
     children: [
       { label: "All Trips", href: "/admin/trips" },
       { label: "Create Trip", href: "/admin/trips/new" },
+      { label: "Categories", href: "/admin/trips/categories" },
+      { label: "Draft Trips", href: "/admin/trips?status=DRAFT" },
+      { label: "Published Trips", href: "/admin/trips?status=PUBLISHED" },
+      { label: "Archived Trips", href: "/admin/trips?isArchived=true" },
     ],
   },
   { label: "Bookings", href: "/admin/bookings", icon: CalendarCheck },

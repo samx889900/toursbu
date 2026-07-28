@@ -16,12 +16,25 @@ datasource db {
 
 enum TripStatus {
   DRAFT
-  REVIEW
   PUBLISHED
-  BOOKINGS_CLOSED
-  COMPLETED
   ARCHIVED
   CANCELLED
+}
+
+enum TripVisibility {
+  PUBLIC
+  PRIVATE
+  HIDDEN
+}
+
+enum PolicyType {
+  CANCELLATION
+  REFUND
+  TERMS
+  SAFETY
+  ELIGIBILITY
+  MEDICAL
+  PACKING
 }
 
 enum BookingStatus {
@@ -255,23 +268,48 @@ model Trip {
   slug        String    @unique
   shortDesc   String?
   description String?   @db.Text
-  location    String?
+  
+  // Overview
+  highlights  String[]
+  tags        String[]
+
+  // Trip Details
+  difficulty  String?
+  duration    String?
+
+  // Location
+  location     String?
+  meetingPoint String?
+  pickupPoint  String?
+  dropPoint    String?
+  googleMapsUrl String?
+
   startDate   DateTime?
   endDate     DateTime?
 
-  // Status & Visibility
-  status     TripStatus @default(DRAFT)
+  // Status, Visibility & Booking Controls
+  status          TripStatus      @default(DRAFT)
+  visibility      TripVisibility  @default(PUBLIC)
+  bookingEnabled  Boolean         @default(false)
+  waitlistEnabled Boolean         @default(false)
+  bookingDeadline DateTime?
+  
+  // Soft Delete
   isArchived Boolean    @default(false)
   deletedAt  DateTime?
+  deletedBy  String?
 
   // Relations
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   // Pricing & Capacity
-  price         Int? // stored in cents or smallest currency unit
-  advanceAmount Int?
-  capacity      Int?
+  price               Int? // stored in cents or smallest currency unit
+  advanceAmount       Int?
+  earlyBirdPrice      Int?
+  groupDiscountAmount Int?
+  gstEnabled          Boolean @default(false)
+  capacity            Int?
 
   // Analytics
   viewCount     Int @default(0)
@@ -284,6 +322,13 @@ model Trip {
   paymentFailure   Int @default(0)
   couponApplied    Int @default(0)
   couponFailed     Int @default(0)
+
+  // SEO
+  seoTitle       String?
+  seoDescription String?
+  seoKeywords    String?
+  canonicalUrl   String?
+  ogImage        String?
 
   // Document attachments
   brochureUrl String?
@@ -314,10 +359,16 @@ model Trip {
 }
 
 model TripImage {
-  id      String  @id @default(cuid())
-  url     String
-  isCover Boolean @default(false)
-  order   Int     @default(0)
+  id        String  @id @default(cuid())
+  url       String
+  isCover   Boolean @default(false)
+  order     Int     @default(0)
+  altText   String?
+  caption   String?
+  width     Int?
+  height    Int?
+  mimeType  String?
+  size      Int?
 
   tripId String
   trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
@@ -347,12 +398,15 @@ model Day {
 }
 
 model Activity {
-  id          String  @id @default(cuid())
-  title       String
-  time        String?
-  location    String?
-  description String? @db.Text
-  order       Int     @default(0)
+  id             String  @id @default(cuid())
+  title          String
+  time           String?
+  location       String?
+  description    String? @db.Text
+  meals          Boolean @default(false)
+  transportation String?
+  accommodation  String?
+  order          Int     @default(0)
 
   dayId String
   day   Day    @relation(fields: [dayId], references: [id], onDelete: Cascade)
@@ -381,10 +435,11 @@ model FAQ {
 }
 
 model CancellationPolicy {
-  id          String  @id @default(cuid())
+  id          String     @id @default(cuid())
+  type        PolicyType @default(CANCELLATION)
   title       String?
-  description String  @db.Text
-  order       Int     @default(0)
+  description String     @db.Text
+  order       Int        @default(0)
 
   tripId String
   trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
