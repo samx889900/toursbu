@@ -9,6 +9,7 @@ import {
   MoreHorizontal,
   Power,
   Trash2,
+  KeyRound,
   Loader2,
 } from "lucide-react";
 
@@ -96,6 +97,33 @@ export default function AdminManagementPage() {
     }
   };
 
+  const resetPassword = async (admin: AdminItem) => {
+    if (admin.role === "SUPER_ADMIN") {
+      toast.error("Cannot reset a SUPER_ADMIN password from here");
+      return;
+    }
+    const newPassword = prompt(`Enter a new temporary password for ${admin.fullName} (min 8 chars):`);
+    if (!newPassword) return;
+    if (newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/admins/${admin.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPassword }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error);
+      }
+      toast.success(`Password reset for ${admin.fullName}. They must change it on next login.`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to reset password");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -173,6 +201,13 @@ export default function AdminManagementPage() {
                         title={admin.isActive ? "Disable" : "Enable"}
                       >
                         <Power className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => resetPassword(admin)}
+                        className="inline-flex items-center justify-center rounded-lg p-1.5 hover:bg-amber-50 text-gray-500 hover:text-amber-600 transition-colors"
+                        title="Reset Password"
+                      >
+                        <KeyRound className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => deleteAdmin(admin)}

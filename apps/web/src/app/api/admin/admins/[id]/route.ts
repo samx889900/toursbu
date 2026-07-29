@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 import { getAdminSession, logAdminAction } from "@/lib/auth/admin-session";
 
 /** PATCH /api/admin/admins/[id] — update admin (toggle active, change role) */
@@ -33,9 +34,18 @@ export async function PATCH(
   if (body.role && body.role !== "SUPER_ADMIN") data.role = body.role;
   if (body.fullName) data.fullName = body.fullName;
 
+  // Reset password (SUPER_ADMIN sets a new temporary password)
+  if (body.newPassword && body.newPassword.length >= 8) {
+    data.passwordHash = await bcrypt.hash(body.newPassword, 12);
+    data.mustChangePassword = true;
+  }
+
   const updated = await prisma.admin.update({ where: { id }, data });
 
-  await logAdminAction("ADMIN_UPDATED", session.adminId, "admin", id, data);
+  await logAdminAction("ADMIN_UPDATED", session.adminId, "admin", id, {
+    ...data,
+    passwordHash: data.passwordHash ? "[REDACTED]" : undefined,
+  });
 
   return NextResponse.json({
     id: updated.id,
